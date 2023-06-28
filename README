@@ -1,0 +1,3 @@
+A JUnit test suite based on the blog series on the MongoDB website,
+s. https://www.mongodb.com/developer/languages/java/java-setup-crud-operations/
+Uses a free MongoDB Atlas instance with already imported sample data.
