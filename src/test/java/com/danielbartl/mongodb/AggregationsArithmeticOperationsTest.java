@@ -6,12 +6,13 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.Sorts;
-import com.mongodb.client.model.mql.MqlValues;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -19,9 +20,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.mongodb.client.model.Projections.*;
+import static com.mongodb.client.model.mql.MqlValues.current;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class AggregationsExpressionTest {
+public class AggregationsArithmeticOperationsTest {
 
     private MongoClient client;
     private MongoCollection<Document> restaurants;
@@ -37,6 +39,7 @@ public class AggregationsExpressionTest {
     }
 
     @Test
+    @DisplayName("Showcase of aggregation expression operations like $multiply and $size in a projection aggregation phase.")
     void testBasicAggregation() {
 
         // given
@@ -55,22 +58,24 @@ public class AggregationsExpressionTest {
                 ));
 
         // when
-        final var categories = MqlValues.current().getArray("categories");
-        final Bson project =
-                Aggregates.project(
-                        fields(
-                                excludeId(),
-                                include("name"),
-                                computed(
-                                        "firstCategory",
-                                        categories.elementAt(0))));
-        final Bson sort = Aggregates.sort(Sorts.ascending("firstCategory"));
-        final List<Document> list = restaurants.aggregate(List.of(project, sort)).into(new ArrayList<>());
+        final var stars = current().getInteger("stars");
+        final var totalCategories = current().getArray("categories").size();
+
+        final Bson rating = Aggregates.project(
+                Projections.fields(
+                        excludeId(),
+                        include("name"),
+                        computed("rating", stars.multiply(totalCategories))
+                ));
+        final Bson sort = Aggregates.sort(Sorts.descending("rating"));
+
+        final List<Document> result =
+                restaurants.aggregate(List.of(rating, sort)).into(new ArrayList<>());
 
         // then
-        assertEquals(10, list.size());
-        assertEquals("Bagels", list.get(0).get("firstCategory"));
-        assertEquals("Steak", list.get(9).get("firstCategory"));
+        assertEquals(10, result.size());
+        assertEquals(20, result.get(0).get("rating"));
+        assertEquals(0, result.get(9).get("rating"));
 
     }
 
